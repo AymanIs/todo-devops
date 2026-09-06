@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-app
+  namespace: todo
+spec:
+  # NodePort : accessible depuis l'exterieur du cluster sur http://<IP-noeud>:30080
+  # Sur un cloud, remplacer par type: LoadBalancer (voir README).
+  type: NodePort
+  selector:
+    app: todo-app
+  ports:
+    - port: 80
+      targetPort: 5000
+      nodePort: 30080
