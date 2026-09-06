@@ -1,0 +1,61 @@
+---
+- name: Installer Java 17 et les outils du pipeline
+  ansible.builtin.apt:
+    name:
+      - openjdk-17-jdk
+      - python3-venv
+    state: present
+
+- name: Ajouter la cle du depot Jenkins
+  ansible.builtin.apt_key:
+    url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+    keyring: /etc/apt/trusted.gpg.d/jenkins.gpg
+    state: present
+
+- name: Ajouter le depot Jenkins
+  ansible.builtin.apt_repository:
+    repo: "deb https://pkg.jenkins.io/debian-stable binary/"
+    filename: jenkins
+    state: present
+
+- name: Installer Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+    update_cache: true
+
+- name: Ajouter jenkins au groupe docker
+  ansible.builtin.user:
+    name: jenkins
+    groups: docker
+    append: true
+  notify: Redemarrer Jenkins
+
+- name: Installer kubectl sur l'agent Jenkins
+  ansible.builtin.get_url:
+    url: https://dl.k8s.io/release/v1.29.3/bin/linux/amd64/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Demarrer et activer Jenkins
+  ansible.builtin.service:
+    name: jenkins
+    state: started
+    enabled: true
+
+- name: Attendre l'ouverture du port 8080
+  ansible.builtin.wait_for:
+    port: 8080
+    delay: 10
+    timeout: 300
+
+- name: Lire le mot de passe d'installation
+  ansible.builtin.slurp:
+    src: /var/lib/jenkins/secrets/initialAdminPassword
+  register: mdp_jenkins
+  ignore_errors: true
+
+- name: Afficher le mot de passe d'installation
+  ansible.builtin.debug:
+    msg: "Mot de passe initial Jenkins : {{ mdp_jenkins.content | b64decode | trim }}"
+  when: mdp_jenkins is succeeded

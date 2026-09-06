@@ -1,0 +1,21 @@
+---
+# Configuration des deux machines provisionnees par Terraform.
+#   ansible-playbook site.yml
+#   ansible-playbook site.yml --limit kubernetes --tags k8s
+
+- name: Prerequis et Docker sur les deux VM
+  hosts: all
+  roles:
+    - { role: base, tags: [base] }
+
+- name: Serveur d'integration continue
+  hosts: jenkins
+  roles:
+    - { role: jenkins, tags: [ci] }
+
+- name: Cluster Kubernetes, base de donnees et serveur web
+  hosts: kubernetes
+  roles:
+    - { role: kubernetes, tags: [k8s] }
+    - { role: postgres, tags: [db] }
+    - { role: nginx, tags: [web] }

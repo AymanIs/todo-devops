@@ -1,0 +1,5 @@
+region       = "eu-west-3"
+prefixe      = "todo-devops"
+cle_publique = "~/.ssh/id_rsa.pub"
+# Restreindre a votre IP publique : curl ifconfig.me
+ip_admin     = "0.0.0.0/0"

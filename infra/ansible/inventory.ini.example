@@ -1,0 +1,14 @@
+# Ce fichier est ecrit automatiquement par Terraform (infra/terraform/main.tf).
+# Modele donne a titre indicatif.
+
+[jenkins]
+13.36.0.1
+
+[kubernetes]
+15.188.0.1
+
+[all:vars]
+ansible_user=ubuntu
+ansible_ssh_private_key_file=~/.ssh/id_rsa
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+k8s_private_ip=172.31.0.10

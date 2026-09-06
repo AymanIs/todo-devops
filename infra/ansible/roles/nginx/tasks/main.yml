@@ -1,0 +1,38 @@
+---
+- name: Installer NGINX
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Recuperer l'adresse du noeud Kubernetes
+  ansible.builtin.command: minikube ip
+  become: true
+  become_user: "{{ ansible_user }}"
+  register: ip_noeud
+  changed_when: false
+
+- name: Deposer la configuration du reverse proxy
+  ansible.builtin.template:
+    src: todo.conf.j2
+    dest: /etc/nginx/sites-available/todo.conf
+    mode: '0644'
+  notify: Recharger NGINX
+
+- name: Activer le site
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/todo.conf
+    dest: /etc/nginx/sites-enabled/todo.conf
+    state: link
+  notify: Recharger NGINX
+
+- name: Retirer le site par defaut
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger NGINX
+
+- name: Demarrer et activer NGINX
+  ansible.builtin.service:
+    name: nginx
+    state: started
+    enabled: true

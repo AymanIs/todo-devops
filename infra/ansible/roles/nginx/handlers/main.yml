@@ -1,0 +1,5 @@
+---
+- name: Recharger NGINX
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded

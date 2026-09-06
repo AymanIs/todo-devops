@@ -1,0 +1,62 @@
+---
+- name: Mettre a jour le cache des paquets
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Installer les outils de base
+  ansible.builtin.apt:
+    name:
+      - git
+      - curl
+      - unzip
+      - python3-pip
+      - ca-certificates
+      - gnupg
+    state: present
+
+- name: Desactiver le swap (exige par kubelet)
+  ansible.builtin.command: swapoff -a
+  when: "'kubernetes' in group_names"
+  changed_when: false
+
+- name: Retirer le swap de /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\sswap\s.*)$'
+    replace: '# \1'
+  when: "'kubernetes' in group_names"
+
+- name: Ajouter la cle GPG de Docker
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    keyring: /etc/apt/trusted.gpg.d/docker.gpg
+    state: present
+
+- name: Ajouter le depot Docker
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    filename: docker
+    state: present
+
+- name: Installer Docker
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: true
+
+- name: Demarrer et activer Docker
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Autoriser l'utilisateur courant a utiliser Docker
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true

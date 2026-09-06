@@ -1,0 +1,56 @@
+---
+# Base installee sur la VM : elle sert de base de secours et de terrain
+# de test. La base utilisee par l'application deployee tourne dans le
+# cluster (voir k8s/04-postgres.yaml).
+- name: Installer PostgreSQL
+  ansible.builtin.apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+
+- name: Demarrer et activer PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Creer la base du projet
+  community.postgresql.postgresql_db:
+    name: "{{ postgres_db }}"
+    state: present
+  become: true
+  become_user: postgres
+
+- name: Creer l'utilisateur applicatif
+  community.postgresql.postgresql_user:
+    db: "{{ postgres_db }}"
+    name: "{{ postgres_user }}"
+    password: "{{ postgres_password }}"
+    role_attr_flags: LOGIN
+    state: present
+  become: true
+  become_user: postgres
+
+- name: Donner les droits sur la base
+  community.postgresql.postgresql_privs:
+    db: "{{ postgres_db }}"
+    role: "{{ postgres_user }}"
+    type: database
+    privs: ALL
+  become: true
+  become_user: postgres
+
+- name: Ecouter sur toutes les interfaces
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/14/main/postgresql.conf
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: Redemarrer PostgreSQL
+
+- name: Autoriser le reseau prive
+  ansible.builtin.lineinfile:
+    path: /etc/postgresql/14/main/pg_hba.conf
+    line: "host    {{ postgres_db }}    {{ postgres_user }}    10.0.0.0/8    scram-sha-256"
+  notify: Redemarrer PostgreSQL

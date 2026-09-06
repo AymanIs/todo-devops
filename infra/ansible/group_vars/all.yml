@@ -1,0 +1,5 @@
+---
+postgres_db: todo
+postgres_user: todo
+postgres_password: Ch4ngeM01!
+app_nodeport: 30080

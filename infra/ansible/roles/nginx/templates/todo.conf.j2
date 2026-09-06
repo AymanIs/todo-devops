@@ -1,0 +1,22 @@
+# Genere par Ansible, ne pas modifier a la main.
+# Le trafic du port 80 est renvoye vers le NodePort du service todo-app.
+upstream todo_app {
+    server {{ ip_noeud.stdout }}:{{ app_nodeport }};
+}
+
+server {
+    listen 80 default_server;
+    server_name _;
+
+    access_log /var/log/nginx/todo_access.log;
+    error_log  /var/log/nginx/todo_error.log;
+
+    location / {
+        proxy_pass http://todo_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 30s;
+    }
+}

@@ -1,0 +1,75 @@
+---
+- name: Installer les dependances de minikube
+  ansible.builtin.apt:
+    name:
+      - conntrack
+      - socat
+    state: present
+
+- name: Installer kubectl
+  ansible.builtin.get_url:
+    url: https://dl.k8s.io/release/v1.29.3/bin/linux/amd64/kubectl
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+
+- name: Installer minikube
+  ansible.builtin.get_url:
+    url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+    dest: /usr/local/bin/minikube
+    mode: '0755'
+
+- name: Verifier si le cluster tourne deja
+  ansible.builtin.command: minikube status
+  become: true
+  become_user: "{{ ansible_user }}"
+  register: etat_minikube
+  changed_when: false
+  failed_when: false
+
+# --listen-address et --apiserver-ips rendent l'API joignable depuis la VM
+# Jenkins ; sans eux minikube n'ecoute que sur 127.0.0.1 dans le conteneur.
+- name: Demarrer le cluster minikube
+  ansible.builtin.command: >
+    minikube start
+    --driver=docker
+    --cpus=2
+    --memory=2600mb
+    --listen-address=0.0.0.0
+    --apiserver-ips={{ k8s_ip }}
+  become: true
+  become_user: "{{ ansible_user }}"
+  when: "'Running' not in etat_minikube.stdout"
+
+- name: Creer le repertoire du volume persistant dans le noeud
+  ansible.builtin.command: minikube ssh -- sudo mkdir -p /data/postgres
+  become: true
+  become_user: "{{ ansible_user }}"
+  changed_when: false
+
+- name: Recuperer l'adresse du noeud
+  ansible.builtin.command: minikube ip
+  become: true
+  become_user: "{{ ansible_user }}"
+  register: minikube_ip
+  changed_when: false
+
+- name: Construire un kubeconfig autonome pour Jenkins
+  ansible.builtin.shell: >
+    kubectl config view --flatten --minify
+    | sed 's|127.0.0.1|{{ k8s_ip }}|'
+    > /home/{{ ansible_user }}/kubeconfig-jenkins.yaml
+  become: true
+  become_user: "{{ ansible_user }}"
+  changed_when: true
+
+- name: Proteger le kubeconfig
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}/kubeconfig-jenkins.yaml"
+    owner: "{{ ansible_user }}"
+    mode: '0600'
+
+- name: Rappel pour la suite
+  ansible.builtin.debug:
+    msg: >-
+      Recuperer /home/{{ ansible_user }}/kubeconfig-jenkins.yaml puis l'ajouter
+      dans Jenkins comme credential "Secret file" nomme kubeconfig.
