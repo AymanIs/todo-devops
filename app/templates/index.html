@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aujourd'hui</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="feuille">
+
+    <header class="tete">
+      <h1>Aujourd'hui</h1>
+      <p class="bilan">
+        {% if tasks %}
+          {{ tasks|length - restantes }} terminees sur {{ tasks|length }}
+        {% else %}
+          Journee vierge
+        {% endif %}
+      </p>
+    </header>
+
+    <div class="jauge" role="presentation">
+      <span style="width: {{ avancement }}%"></span>
+    </div>
+
+    <form class="saisie" method="post" action="{{ url_for('create_task') }}">
+      <input type="text" name="title" maxlength="200" autocomplete="off" autofocus
+             placeholder="Qu'est-ce qui vous attend ?" aria-label="Nouvelle tache" required>
+      <button type="submit">Ajouter</button>
+    </form>
+
+    {% if tasks %}
+      <ul class="liste">
+        {% for tache in tasks %}
+          <li class="ligne {% if tache.done %}faite{% endif %}">
+            <form method="post" action="{{ url_for('toggle_task', task_id=tache.id) }}">
+              <button type="submit" class="case"
+                      aria-label="{% if tache.done %}Rouvrir{% else %}Terminer{% endif %} : {{ tache.title }}">
+                <span aria-hidden="true">{% if tache.done %}&#10003;{% endif %}</span>
+              </button>
+            </form>
+
+            <span class="intitule">{{ tache.title }}</span>
+
+            <form method="post" action="{{ url_for('delete_task', task_id=tache.id) }}">
+              <button type="submit" class="retirer" aria-label="Supprimer : {{ tache.title }}">
+                <span aria-hidden="true">&#215;</span>
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="vide">Ecrivez la premiere tache dans le champ ci-dessus.</p>
+    {% endif %}
+
+  </main>
+</body>
+</html>

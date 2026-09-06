@@ -1,0 +1,142 @@
+:root {
+  --encre: #14181b;
+  --papier: #fdfdfc;
+  --fond: #dfe3dd;
+  --trait: #cfd4cc;
+  --vert: #2f6a4a;
+  --muet: #767f79;
+  --rouge: #a8382c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: clamp(1.5rem, 8vh, 5rem) 1rem;
+  background: var(--fond);
+  color: var(--encre);
+  font: 16px/1.55 "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.feuille {
+  max-width: 32rem;
+  margin: 0 auto;
+  background: var(--papier);
+  padding: 2.25rem 2rem 1.5rem;
+  box-shadow: 0 1px 0 var(--trait), 0 18px 40px -30px rgba(20, 24, 27, .6);
+}
+
+.tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+h1 {
+  font: 400 2.1rem/1.1 Georgia, "Times New Roman", serif;
+  letter-spacing: -.015em;
+  margin: 0;
+}
+
+.bilan { margin: 0; color: var(--muet); font-size: .875rem; }
+
+/* Seule figure de la page : l'avancement de la journee, lu d'un coup d'oeil. */
+.jauge {
+  height: 3px;
+  background: var(--trait);
+  margin: 1rem 0 1.75rem;
+}
+
+.jauge span {
+  display: block;
+  height: 100%;
+  background: var(--vert);
+  transition: width .25s ease;
+}
+
+.saisie { display: flex; gap: .5rem; }
+
+.saisie input {
+  flex: 1;
+  min-width: 0;
+  padding: .65rem .2rem;
+  border: 0;
+  border-bottom: 1px solid var(--trait);
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.saisie input::placeholder { color: var(--muet); }
+.saisie input:focus { outline: none; border-bottom-color: var(--encre); }
+
+.saisie button {
+  padding: .55rem 1.15rem;
+  border: 1px solid var(--encre);
+  background: var(--encre);
+  color: var(--papier);
+  font: inherit;
+  cursor: pointer;
+}
+
+.saisie button:hover { background: var(--vert); border-color: var(--vert); }
+
+.liste { list-style: none; margin: 1.75rem 0 0; padding: 0; }
+
+.ligne {
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  padding: .8rem 0;
+  border-top: 1px solid var(--trait);
+}
+
+.ligne form { display: flex; margin: 0; }
+
+.case {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: none;
+  border: 1px solid var(--muet);
+  border-radius: 50%;
+  background: none;
+  color: var(--papier);
+  font-size: .8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.case:hover { border-color: var(--vert); }
+
+.intitule { flex: 1; word-break: break-word; }
+
+.faite .case { background: var(--vert); border-color: var(--vert); }
+.faite .intitule { color: var(--muet); text-decoration: line-through; }
+
+.retirer {
+  border: 0;
+  background: none;
+  color: var(--trait);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0 .15rem;
+  cursor: pointer;
+}
+
+.retirer:hover { color: var(--rouge); }
+
+.vide {
+  margin: 1.75rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--trait);
+  color: var(--muet);
+}
+
+button:focus-visible,
+input:focus-visible { outline: 2px solid var(--vert); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jauge span { transition: none; }
+}
