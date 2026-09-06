@@ -1,0 +1,31 @@
+# Environnement de developpement local : application + base de donnees.
+#   docker compose up --build   puis   http://localhost:5000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: todo
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todo
+    volumes:
+      - donnees:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo -d todo"]
+      interval: 5s
+      retries: 10
+
+  web:
+    build: ./app
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_NAME: todo
+      DB_USER: todo
+      DB_PASSWORD: todo
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  donnees:
