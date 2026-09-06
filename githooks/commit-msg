@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Impose le format Conventional Commits : type(portee): message
+# Exemples : feat(app): ajout du filtre par statut
+#            fix(k8s): correction du chemin du volume
+
+motif='^(feat|fix|docs|test|chore|refactor|ci)(\([a-z0-9-]+\))?: .{5,}'
+
+if ! grep -qE "$motif" "$1"; then
+    echo "Message de commit refuse."
+    echo "Format attendu : type(portee): description"
+    echo "Types acceptes : feat, fix, docs, test, chore, refactor, ci"
+    exit 1
+fi

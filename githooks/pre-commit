@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Bloque le commit si le lint ou les tests echouent.
+# Installation : cp githooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit
+
+set -e
+echo "[pre-commit] verification du code..."
+
+cd "$(git rev-parse --show-toplevel)/app"
+
+if command -v flake8 >/dev/null 2>&1; then
+    flake8 . || { echo "[pre-commit] lint en echec, commit annule."; exit 1; }
+else
+    echo "[pre-commit] flake8 absent, etape ignoree."
+fi
+
+if command -v pytest >/dev/null 2>&1; then
+    TODO_BACKEND=memory INIT_SCHEMA=0 pytest -q \
+        || { echo "[pre-commit] tests en echec, commit annule."; exit 1; }
+else
+    echo "[pre-commit] pytest absent, etape ignoree."
+fi
+
+echo "[pre-commit] tout est vert."
