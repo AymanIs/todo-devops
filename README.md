@@ -43,8 +43,12 @@ persistant : les pods peuvent disparaitre, les taches restent.
 │   ├── terraform/          les 2 VM, le reseau, les cles, l'inventaire Ansible
 │   └── ansible/            roles base, jenkins, kubernetes, postgres, nginx
 ├── k8s/                    manifests numerotes dans l'ordre d'application
+├── ci/jenkins/             image Jenkins outillee (docker, kubectl, python3-venv)
 ├── githooks/               pre-commit et commit-msg
-├── docs/                   workflow Git et pull request commentee
+├── docs/
+│   ├── workflow-git.md     branches, commits, hooks
+│   ├── pull-request.md     la revue commentee
+│   └── captures/           preuves d'execution
 ├── Jenkinsfile             pipeline declaratif
 └── docker-compose.yml      environnement local
 ```
@@ -144,8 +148,53 @@ ansible-playbook site.yml --limit kubernetes --tags k8s
 5. Dans GitHub, **Settings > Webhooks** : `http://<jenkins_ip>:8080/github-webhook/`,
    content type `application/json`.
 
-Avant le premier build, remplacer `DOCKERHUB_USER = 'moncompte'` en haut du
-`Jenkinsfile` par votre identifiant.
+Avant le premier build, remplacer la valeur de `DOCKERHUB_USER` en haut du
+`Jenkinsfile` par votre identifiant DockerHub. Le compte utilise ici est `islamk12` :
+le `docker push` n'est accepte que sous le compte auquel appartient le jeton
+d'authentification.
+
+### Variante locale, celle qui a servi a la demonstration
+
+Faute de credits cloud, les deux VM n'ont pas ete provisionnees : Jenkins et le cluster
+tournent sur le poste de travail. Le code Terraform reste dans le depot et passe
+`terraform validate` ; seule son application est absente.
+
+Jenkins tourne dans un conteneur construit depuis `ci/jenkins/Dockerfile`. L'image
+officielle ne fournit que `git` : le pipeline a besoin en plus de `python3-venv` pour
+les tests, du client Docker pour le build, et de `kubectl` pour le deploiement.
+
+```bash
+docker build --build-arg DOCKER_GID=$(getent group docker | cut -d: -f3) \
+    -t todo-jenkins:lts ci/jenkins
+
+docker volume create jenkins_home
+docker run -d --name jenkins \
+    --network minikube --ip 192.168.49.10 \
+    -p 8080:8080 -p 50000:50000 \
+    -v jenkins_home:/var/jenkins_home \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -e JAVA_OPTS="-Xmx1g" \
+    todo-jenkins:lts
+```
+
+Trois points meritent une explication.
+
+**Le groupe Docker.** Le socket `/var/run/docker.sock` appartient au groupe `docker` de
+l'hote. L'utilisateur `jenkins` doit appartenir au meme identifiant de groupe pour
+dialoguer avec le demon, d'ou l'argument `DOCKER_GID`.
+
+**Le reseau.** Jenkins est attache au reseau `minikube` afin de joindre l'API Kubernetes
+sur `192.168.49.2:8443`. L'adresse fixe `192.168.49.10` est indispensable : sans elle,
+Jenkins redemarre avant minikube apres un reboot et occupe `192.168.49.2`, l'adresse
+reservee au noeud, ce qui empeche le cluster de demarrer.
+
+**Le kubeconfig.** Celui de minikube reference des certificats sur le disque de l'hote,
+absents du conteneur. On l'aplatit avant de l'importer comme *secret file*, ce qui
+embarque les certificats dans le fichier :
+
+```bash
+kubectl config view --flatten --minify --raw > kubeconfig-jenkins.yaml
+```
 
 ## 5. Le pipeline
 
@@ -195,6 +244,61 @@ depuis l'interface, supprimer le pod de la base, constater que la tache est touj
 kubectl -n todo delete pod -l app=postgres
 kubectl -n todo get pods -w
 ```
+
+## Preuves d'execution
+
+Les captures ci-dessous ont ete prises sur la chaine reellement deployee.
+
+### L'application servie par le cluster
+
+![Application](docs/captures/app.png)
+
+Servie par les deux replicas via le service NodePort, sur `http://192.168.49.2:30080`.
+
+### Le pipeline Jenkins
+
+![Vue du job](docs/captures/pipeline.png)
+
+Le build #1 est rouge, le #2 vert. L'echec n'est pas masque : il a revele que l'agent
+Jenkins tourne sous Python 3.13 alors que le poste de travail utilise Python 3.12, et
+que `psycopg2-binary` 2.9.9 ne publie pas de paquet precompile pour cette version. La
+dependance a ete relevee en 2.9.10. C'est le role d'une chaine d'integration que de
+rendre visible ce genre d'ecart entre environnements.
+
+![Build vert](docs/captures/build-vert.png)
+
+Fin du build #2 : `Finished: SUCCESS`. On y voit le remplacement progressif des pods,
+un ancien en `Terminating` pendant que les deux nouveaux repondent deja, puis l'appel
+de `/health` depuis l'interieur d'un conteneur qui renvoie `{"status":"up"}`.
+
+### L'image publiee
+
+![DockerHub](docs/captures/dockerhub.png)
+
+Les etiquettes `2` et `latest` partagent le digest `fa32e6b3d19b`, celui que le journal
+du build affiche apres le push. Le numero de build Jenkins sert d'etiquette : le lien
+entre un build et ce qui tourne sur le cluster est verifiable.
+
+### L'etat du cluster
+
+![kubectl](docs/captures/kubectl.png)
+
+Trois pods prets, le service NodePort, et le volume persistant `Bound` sur 2 Gio. Les
+ages se lisent : les pods applicatifs datent du dernier build, la base tourne depuis
+plusieurs jours. Le calcul est jetable, l'etat ne l'est pas.
+
+### La gestion Git
+
+![Revue de la PR](docs/captures/pr-revue.png)
+
+Pull request #1 : une description structuree, un commentaire de revue depose sur le
+diff, une reponse, la conversation resolue, puis une fusion en squash et la suppression
+de la branche.
+
+![PR fusionnees](docs/captures/fusionnee.png)
+
+Cinq pull requests fusionnees. La branche `main` est protegee par un ruleset qui impose
+le passage par une pull request et interdit la suppression comme le push force.
 
 ## Git
 
