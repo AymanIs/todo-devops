@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB_USER = 'moncompte'          // a remplacer par votre identifiant DockerHub
+        DOCKERHUB_USER = 'aymanis'
         IMAGE_NAME     = "${DOCKERHUB_USER}/todo-app"
         IMAGE          = "${IMAGE_NAME}:${env.BUILD_NUMBER}"
         IMAGE_LATEST   = "${IMAGE_NAME}:latest"
